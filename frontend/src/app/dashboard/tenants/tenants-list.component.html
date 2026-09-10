@@ -1,0 +1,98 @@
+<div class="tenants-page">
+  <div class="page-header">
+    <div>
+      <h1>Inmobiliarias</h1>
+      <p class="subtitle">Gestiona las instancias de tus clientes</p>
+    </div>
+    <button class="btn-primary" (click)="abrirNuevo()">+ Nueva inmobiliaria</button>
+  </div>
+
+  @if (cargando()) {
+    <div class="estado-carga">Cargando...</div>
+  } @else if (tenants().length === 0) {
+    <div class="estado-vacio">
+      <p>Aún no tienes inmobiliarias registradas.</p>
+      <button class="btn-primary" (click)="abrirNuevo()">Crear la primera</button>
+    </div>
+  } @else {
+    <div class="tabla-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Inmobiliaria</th>
+            <th>Dominio</th>
+            <th>Slug</th>
+            <th>Estado</th>
+            <th>Creado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of tenants(); track t.id) {
+            <tr>
+              <td>
+                <div class="marca">
+                  <span class="punto-color" [style.background]="t.color_primario"></span>
+                  {{ t.nombre_comercial }}
+                </div>
+              </td>
+              <td>{{ t.dominio }}</td>
+              <td class="slug">{{ t.slug }}</td>
+              <td><span class="chip" [ngClass]="'chip-' + t.estado">{{ t.estado }}</span></td>
+              <td>{{ t.created_at | slice:0:10 }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (modalAbierto()) {
+    <div class="modal-overlay" (click)="cerrarModal()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Nueva inmobiliaria</h2>
+          <button class="btn-cerrar" (click)="cerrarModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          @if (error()) {
+            <div class="mensaje-error">{{ error() }}</div>
+          }
+
+          <div class="campo">
+            <label>Nombre comercial</label>
+            <input type="text" [(ngModel)]="form.nombre_comercial" (ngModelChange)="onNombreChange()" placeholder="Los Pinos Inmobiliaria" />
+          </div>
+
+          <div class="campo">
+            <label>Slug</label>
+            <input type="text" [(ngModel)]="form.slug" (ngModelChange)="onSlugChange()" placeholder="los-pinos" />
+          </div>
+
+          <div class="campo">
+            <label>Dominio</label>
+            <input type="text" [(ngModel)]="form.dominio" placeholder="lospinos.tudominio.com" />
+          </div>
+
+          <div class="campo-doble">
+            <div class="campo">
+              <label>Color primario</label>
+              <input type="color" [(ngModel)]="form.color_primario" />
+            </div>
+            <div class="campo">
+              <label>Color secundario</label>
+              <input type="color" [(ngModel)]="form.color_secundario" />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secundario" (click)="cerrarModal()">Cancelar</button>
+          <button class="btn-primary" (click)="guardar()" [disabled]="guardando()">
+            {{ guardando() ? 'Creando...' : 'Crear inmobiliaria' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

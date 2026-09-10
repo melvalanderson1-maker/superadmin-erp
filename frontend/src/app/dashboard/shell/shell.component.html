@@ -1,0 +1,20 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-icono">◆</span>
+      Super Admin
+    </div>
+
+    <nav>
+      <a routerLink="/tenants" routerLinkActive="activo">
+        <span>🏢</span> Inmobiliarias
+      </a>
+    </nav>
+
+    <button class="btn-logout" (click)="cerrarSesion()">Cerrar sesión</button>
+  </aside>
+
+  <main class="contenido">
+    <router-outlet></router-outlet>
+  </main>
+</div>

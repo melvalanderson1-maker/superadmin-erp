@@ -1,0 +1,24 @@
+<div class="login-page">
+  <div class="login-card">
+    <h1>Super Admin</h1>
+    <p class="subtitle">Panel de gestión de inmobiliarias</p>
+
+    @if (error()) {
+      <div class="mensaje-error">{{ error() }}</div>
+    }
+
+    <div class="campo">
+      <label>Correo</label>
+      <input type="email" [(ngModel)]="correo" (keyup.enter)="submit()" />
+    </div>
+
+    <div class="campo">
+      <label>Contraseña</label>
+      <input type="password" [(ngModel)]="password" (keyup.enter)="submit()" />
+    </div>
+
+    <button class="btn-primary" (click)="submit()" [disabled]="cargando()">
+      {{ cargando() ? 'Ingresando...' : 'Ingresar' }}
+    </button>
+  </div>
+</div>
