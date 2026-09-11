@@ -157,3 +157,18 @@ td {
   padding: 1.1rem 1.5rem;
   border-top: 1px solid #e2e8f0;
 }
+
+
+.btn-redeploy {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #1d4ed8;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-redeploy:hover { background: #eff6ff; }
+.btn-redeploy:disabled { opacity: 0.6; cursor: not-allowed; }

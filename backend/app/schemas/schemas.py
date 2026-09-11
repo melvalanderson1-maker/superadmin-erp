@@ -39,6 +39,8 @@ class TenantOut(ORMBase):
     estado: str
     fecha_vencimiento: Optional[date] = None
     created_at: datetime
+    coolify_app_uuid: Optional[str] = None
+    backend_uuid: Optional[str] = None
 
 
 class TenantEstadoOut(BaseModel):

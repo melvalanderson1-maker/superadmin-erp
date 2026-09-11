@@ -17,4 +17,8 @@ export class TenantAdminService {
   obtener(id: number) {
     return this.api.get<Tenant>(`/tenants/${id}`);
   }
+
+  redeploy(id: number) {
+    return this.api.post<Tenant>(`/tenants/${id}/redeploy`, {});
+  }
 }

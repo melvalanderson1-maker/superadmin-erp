@@ -44,7 +44,24 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         # 1. Base de datos
         res_db = await coolify.crear_base_datos(tenant.slug)
         db_uuid = res_db.get("uuid")
-        database_url = res_db.get("internal_db_url")
+
+        # Coolify puede devolver la URL interna bajo distintas claves según versión;
+        # probamos varias antes de rendirnos.
+        database_url_raw = (
+            res_db.get("internal_db_url")
+            or res_db.get("postgres_url")
+            or res_db.get("connection_url")
+        )
+        if not database_url_raw:
+            raise RuntimeError(f"Coolify no devolvió una URL de conexión para la BD. Respuesta cruda: {res_db}")
+
+        # Forzamos SIEMPRE el driver psycopg2 explícito, sin importar qué prefijo venga.
+        database_url = database_url_raw
+        for prefijo_viejo in ("postgres://", "postgresql://"):
+            if database_url.startswith(prefijo_viejo):
+                database_url = "postgresql+psycopg2://" + database_url[len(prefijo_viejo):]
+                break
+
         secret_key = secrets.token_urlsafe(32)
 
         # 2. Backend
@@ -81,6 +98,7 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
             tenant.dominio = dominio_real
 
         tenant.coolify_app_uuid = frontend_uuid
+        tenant.backend_uuid = backend_uuid
         tenant.coolify_db_uuid = db_uuid
         tenant.estado = m.EstadoTenantEnum.activo
 
@@ -137,6 +155,29 @@ async def reanudar_tenant(id_tenant: int, db: Session = Depends(get_db)):
     db.refresh(tenant)
     return tenant
 
+
+
+@router.post("/{id_tenant}/redeploy", response_model=s.TenantOut)
+async def redeploy_tenant(id_tenant: int, db: Session = Depends(get_db)):
+    tenant = db.query(m.Tenant).filter(m.Tenant.id == id_tenant).first()
+    if not tenant:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant no encontrado")
+
+    coolify = CoolifyService()
+    try:
+        if tenant.backend_uuid:
+            await coolify.redeploy(tenant.backend_uuid)
+        if tenant.coolify_app_uuid:
+            await coolify.redeploy(tenant.coolify_app_uuid)
+
+        tenant.estado = m.EstadoTenantEnum.activo
+        db.add(m.HistorialProvisionamiento(id_tenant=tenant.id, accion="redeploy", resultado="exito"))
+    except Exception as e:
+        db.add(m.HistorialProvisionamiento(id_tenant=tenant.id, accion="redeploy", resultado="error", detalle=str(e)))
+
+    db.commit()
+    db.refresh(tenant)
+    return tenant
 
 @router.get("/{id_tenant}/historial")
 def historial_tenant(id_tenant: int, db: Session = Depends(get_db)):

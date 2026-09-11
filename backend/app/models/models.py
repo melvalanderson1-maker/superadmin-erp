@@ -38,7 +38,8 @@ class Tenant(Base):
     id_plan = Column(Integer, ForeignKey("planes.id"))
     estado = Column(SAEnum(EstadoTenantEnum, name="estado_tenant_enum"), nullable=False, default=EstadoTenantEnum.provisionando)
 
-    coolify_app_uuid = Column(String(100))
+    coolify_app_uuid = Column(String(100))   # frontend
+    backend_uuid = Column(String(100))       # backend
     coolify_db_uuid = Column(String(100))
 
     db_host = Column(String(200))

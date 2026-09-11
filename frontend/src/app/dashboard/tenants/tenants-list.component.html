@@ -24,6 +24,7 @@
             <th>Slug</th>
             <th>Estado</th>
             <th>Creado</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -39,6 +40,15 @@
               <td class="slug">{{ t.slug }}</td>
               <td><span class="chip" [ngClass]="'chip-' + t.estado">{{ t.estado }}</span></td>
               <td>{{ t.created_at | slice:0:10 }}</td>
+              <td>
+                <button
+                  class="btn-redeploy"
+                  (click)="redeploy(t)"
+                  [disabled]="redesplegandoId() === t.id"
+                >
+                  {{ redesplegandoId() === t.id ? 'Redesplegando...' : '↻ Redeploy' }}
+                </button>
+              </td>
             </tr>
           }
         </tbody>
