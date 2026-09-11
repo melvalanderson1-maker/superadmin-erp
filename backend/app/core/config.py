@@ -11,6 +11,8 @@ class Settings(BaseSettings):
 
     COOLIFY_API_URL: str
     COOLIFY_API_TOKEN: str
+    COOLIFY_SERVER_UUID: str
+    COOLIFY_PROJECT_ERP_UUID: str
     DOMINIO_BASE: str
 
     class Config:
