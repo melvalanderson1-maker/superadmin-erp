@@ -138,6 +138,21 @@ async def reanudar_tenant(id_tenant: int, db: Session = Depends(get_db)):
     return tenant
 
 
+@router.get("/{id_tenant}/historial")
+def historial_tenant(id_tenant: int, db: Session = Depends(get_db)):
+    """ENDPOINT TEMPORAL — para depurar errores de provisionamiento."""
+    registros = (
+        db.query(m.HistorialProvisionamiento)
+        .filter(m.HistorialProvisionamiento.id_tenant == id_tenant)
+        .order_by(m.HistorialProvisionamiento.created_at.desc())
+        .all()
+    )
+    return [
+        {"accion": r.accion, "resultado": r.resultado, "detalle": r.detalle, "fecha": r.created_at}
+        for r in registros
+    ]
+
+
 @router.get("/{id_tenant}", response_model=s.TenantOut)
 def obtener_tenant(id_tenant: int, db: Session = Depends(get_db)):
     tenant = db.query(m.Tenant).filter(m.Tenant.id == id_tenant).first()
