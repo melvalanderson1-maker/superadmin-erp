@@ -48,7 +48,7 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         secret_key = secrets.token_urlsafe(32)
 
         # 2. Backend
-        res_backend = await coolify.crear_backend(tenant.slug, dominio_api)
+        res_backend = await coolify.crear_backend(tenant.slug, dominio_api, database_url)
         backend_uuid = res_backend.get("uuid")
 
         # 3. Variables de entorno del backend (identidad de marca + licencia)
