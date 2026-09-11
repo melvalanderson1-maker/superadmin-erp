@@ -21,4 +21,9 @@ export class TenantAdminService {
   redeploy(id: number) {
     return this.api.post<Tenant>(`/tenants/${id}/redeploy`, {});
   }
+
+
+  eliminar(id: number) {
+    return this.api.delete<void>(`/tenants/${id}`);
+  }
 }

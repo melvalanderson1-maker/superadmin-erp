@@ -179,6 +179,38 @@ async def redeploy_tenant(id_tenant: int, db: Session = Depends(get_db)):
     db.refresh(tenant)
     return tenant
 
+
+
+@router.delete("/{id_tenant}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_tenant(id_tenant: int, db: Session = Depends(get_db)):
+    tenant = db.query(m.Tenant).filter(m.Tenant.id == id_tenant).first()
+    if not tenant:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant no encontrado")
+
+    coolify = CoolifyService()
+
+    if tenant.backend_uuid:
+        try:
+            await coolify.eliminar_aplicacion(tenant.backend_uuid)
+        except Exception:
+            pass  # seguimos intentando borrar lo demás aunque uno falle
+
+    if tenant.coolify_app_uuid:
+        try:
+            await coolify.eliminar_aplicacion(tenant.coolify_app_uuid)
+        except Exception:
+            pass
+
+    if tenant.coolify_db_uuid:
+        try:
+            await coolify.eliminar_base_datos(tenant.coolify_db_uuid)
+        except Exception:
+            pass
+
+    db.delete(tenant)
+    db.commit()
+
+
 @router.get("/{id_tenant}/historial")
 def historial_tenant(id_tenant: int, db: Session = Depends(get_db)):
     """ENDPOINT TEMPORAL — para depurar errores de provisionamiento."""

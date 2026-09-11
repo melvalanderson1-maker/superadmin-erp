@@ -101,3 +101,11 @@ class CoolifyService:
 
     async def redeploy(self, app_uuid: str) -> None:
         await self.deploy(app_uuid)
+
+    async def eliminar_aplicacion(self, app_uuid: str) -> None:
+        async with httpx.AsyncClient(timeout=30) as client:
+            await client.delete(f"{self.base_url}/applications/{app_uuid}", headers=self.headers)
+
+    async def eliminar_base_datos(self, db_uuid: str) -> None:
+        async with httpx.AsyncClient(timeout=30) as client:
+            await client.delete(f"{self.base_url}/databases/{db_uuid}", headers=self.headers)

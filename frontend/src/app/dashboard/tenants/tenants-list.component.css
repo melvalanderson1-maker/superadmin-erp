@@ -172,3 +172,41 @@ td {
 
 .btn-redeploy:hover { background: #eff6ff; }
 .btn-redeploy:disabled { opacity: 0.6; cursor: not-allowed; }
+
+
+.acciones {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.btn-eliminar {
+  background: white;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-eliminar:hover { background: #fef2f2; }
+
+.texto-advertencia {
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.btn-peligro {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-peligro:hover { background: #b91c1c; }
+.btn-peligro:disabled { opacity: 0.6; cursor: not-allowed; }

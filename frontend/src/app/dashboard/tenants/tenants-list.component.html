@@ -40,13 +40,16 @@
               <td class="slug">{{ t.slug }}</td>
               <td><span class="chip" [ngClass]="'chip-' + t.estado">{{ t.estado }}</span></td>
               <td>{{ t.created_at | slice:0:10 }}</td>
-              <td>
+              <td class="acciones">
                 <button
                   class="btn-redeploy"
                   (click)="redeploy(t)"
                   [disabled]="redesplegandoId() === t.id"
                 >
                   {{ redesplegandoId() === t.id ? 'Redesplegando...' : '↻ Redeploy' }}
+                </button>
+                <button class="btn-eliminar" (click)="abrirConfirmarEliminar(t)">
+                  🗑️ Eliminar
                 </button>
               </td>
             </tr>
@@ -100,6 +103,32 @@
           <button class="btn-secundario" (click)="cerrarModal()">Cancelar</button>
           <button class="btn-primary" (click)="guardar()" [disabled]="guardando()">
             {{ guardando() ? 'Creando...' : 'Crear inmobiliaria' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+
+    @if (modalEliminarAbierto()) {
+    <div class="modal-overlay" (click)="cerrarConfirmarEliminar()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Eliminar inmobiliaria</h2>
+          <button class="btn-cerrar" (click)="cerrarConfirmarEliminar()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="texto-advertencia">
+            Esto eliminará permanentemente <strong>{{ tenantAEliminar()?.nombre_comercial }}</strong>,
+            incluyendo su base de datos, backend y frontend en Coolify. Esta acción no se puede deshacer.
+          </p>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secundario" (click)="cerrarConfirmarEliminar()">Cancelar</button>
+          <button class="btn-peligro" (click)="confirmarEliminar()" [disabled]="eliminando()">
+            {{ eliminando() ? 'Eliminando...' : 'Sí, eliminar todo' }}
           </button>
         </div>
       </div>

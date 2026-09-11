@@ -116,4 +116,37 @@ export class TenantsListComponent implements OnInit {
       error: () => this.redesplegandoId.set(null),
     });
   }
+
+
+  modalEliminarAbierto = signal(false);
+  tenantAEliminar = signal<Tenant | null>(null);
+  eliminando = signal(false);
+
+  abrirConfirmarEliminar(tenant: Tenant): void {
+    this.tenantAEliminar.set(tenant);
+    this.modalEliminarAbierto.set(true);
+  }
+
+  cerrarConfirmarEliminar(): void {
+    this.modalEliminarAbierto.set(false);
+    this.tenantAEliminar.set(null);
+  }
+
+  confirmarEliminar(): void {
+    const tenant = this.tenantAEliminar();
+    if (!tenant) return;
+
+    this.eliminando.set(true);
+    this.tenantService.eliminar(tenant.id).subscribe({
+      next: () => {
+        this.eliminando.set(false);
+        this.modalEliminarAbierto.set(false);
+        this.tenantAEliminar.set(null);
+        this.cargarTenants();
+      },
+      error: () => {
+        this.eliminando.set(false);
+      },
+    });
+  }
 }
