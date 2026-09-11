@@ -52,7 +52,7 @@ class CoolifyService:
             "build_pack": "dockerfile",
             "base_directory": "/backend",
             "ports_exposes": "8000",
-            "domains": dominio_api,
+            "domains": f"https://{dominio_api}" if dominio_api else "",
             "instant_deploy": False,
         }
         return await self._post("/applications/public", payload)
@@ -68,7 +68,7 @@ class CoolifyService:
             "build_pack": "dockerfile",
             "base_directory": "/frontend",
             "ports_exposes": "80",
-            "domains": dominio_publico,
+            "domains": f"https://{dominio_publico}" if dominio_publico else "",
             "instant_deploy": False,
         }
         return await self._post("/applications/public", payload)
