@@ -17,6 +17,11 @@ export interface Tenant {
   estado: EstadoTenant;
   fecha_vencimiento?: string;
   created_at: string;
+  coolify_app_uuid?: string;
+  backend_uuid?: string;
+  dominio_backend?: string;
+  admin_correo_generado?: string;
+  admin_password_generada?: string;
 }
 
 export interface TenantCreate {

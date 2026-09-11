@@ -1,5 +1,7 @@
+import asyncio
 import secrets
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -25,8 +27,6 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
 
     datos_tenant = payload.model_dump()
     if not datos_tenant.get("dominio"):
-        # Sin dominio real todavía (modo prueba): placeholder único por slug.
-        # Se sobreescribe más abajo con el .sslip.io real que genere Coolify.
         datos_tenant["dominio"] = f"pendiente-{payload.slug}.local"
 
     tenant = m.Tenant(**datos_tenant, estado=m.EstadoTenantEnum.provisionando)
@@ -35,18 +35,12 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
     db.refresh(tenant)
 
     coolify = CoolifyService()
-    # Mientras el cliente no tenga dominio propio, dejamos que Coolify
-    # autogenere un subdominio .sslip.io (igual que hizo con el Super Admin).
-    dominio_publico = ""
-    dominio_api = ""
 
     try:
         # 1. Base de datos
         res_db = await coolify.crear_base_datos(tenant.slug)
         db_uuid = res_db.get("uuid")
 
-        # Coolify puede devolver la URL interna bajo distintas claves según versión;
-        # probamos varias antes de rendirnos.
         database_url_raw = (
             res_db.get("internal_db_url")
             or res_db.get("postgres_url")
@@ -55,7 +49,6 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         if not database_url_raw:
             raise RuntimeError(f"Coolify no devolvió una URL de conexión para la BD. Respuesta cruda: {res_db}")
 
-        # Forzamos SIEMPRE el driver psycopg2 explícito, sin importar qué prefijo venga.
         database_url = database_url_raw
         for prefijo_viejo in ("postgres://", "postgresql://"):
             if database_url.startswith(prefijo_viejo):
@@ -63,17 +56,17 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
                 break
 
         secret_key = secrets.token_urlsafe(32)
+        bootstrap_secret = secrets.token_urlsafe(24)
 
-        # 2. Backend
-        res_backend = await coolify.crear_backend(tenant.slug, dominio_api, database_url)
+        # 2. Backend — se crea y despliega PRIMERO, para conocer su dominio real
+        res_backend = await coolify.crear_backend(tenant.slug, "", database_url)
         backend_uuid = res_backend.get("uuid")
 
-        # 3. Variables de entorno del backend (identidad de marca + licencia)
         await coolify.set_env_var(backend_uuid, "DATABASE_URL", database_url)
         await coolify.set_env_var(backend_uuid, "SECRET_KEY", secret_key)
+        await coolify.set_env_var(backend_uuid, "BOOTSTRAP_SECRET", bootstrap_secret)
         await coolify.set_env_var(backend_uuid, "EMPRESA_NOMBRE", tenant.nombre_comercial)
         await coolify.set_env_var(backend_uuid, "EMPRESA_SLUG", tenant.slug)
-        await coolify.set_env_var(backend_uuid, "EMPRESA_DOMINIO", dominio_publico)
         await coolify.set_env_var(backend_uuid, "EMPRESA_COLOR_PRIMARIO", tenant.color_primario)
         await coolify.set_env_var(backend_uuid, "EMPRESA_COLOR_SECUNDARIO", tenant.color_secundario)
         await coolify.set_env_var(backend_uuid, "LICENCIA_TENANT_ID", tenant.slug)
@@ -82,29 +75,72 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         )
         await coolify.set_env_var(backend_uuid, "LICENCIA_VERIFICAR", "true")
 
-        # 4. Frontend
-        res_frontend = await coolify.crear_frontend(tenant.slug, dominio_publico)
-        frontend_uuid = res_frontend.get("uuid")
-
-        # 5. Deploy de ambos
         await coolify.deploy(backend_uuid)
+
+        info_backend = await coolify.obtener_aplicacion(backend_uuid)
+        dominio_backend = info_backend.get("fqdn", "").replace("https://", "").replace("http://", "").strip(",")
+        url_backend = f"https://{dominio_backend}" if dominio_backend else None
+
+        # 3. Frontend — ya conocemos la URL del backend, se la pasamos como API_URL
+        res_frontend = await coolify.crear_frontend(tenant.slug, "")
+        frontend_uuid = res_frontend.get("uuid")
+        await coolify.set_env_var(frontend_uuid, "API_URL", url_backend or "")
         await coolify.deploy(frontend_uuid)
 
-        # Coolify ya autogeneró un dominio .sslip.io para cada app —
-        # lo leemos y lo guardamos como el dominio real de acceso.
         info_frontend = await coolify.obtener_aplicacion(frontend_uuid)
         dominio_real = info_frontend.get("fqdn", "").replace("https://", "").replace("http://", "").strip(",")
         if dominio_real:
             tenant.dominio = dominio_real
 
+        # 4. Actualizamos el backend con el dominio real del frontend (para CORS) y redeploy
+        if dominio_real:
+            await coolify.set_env_var(backend_uuid, "EMPRESA_DOMINIO", dominio_real)
+            await coolify.set_env_var(backend_uuid, "CORS_ORIGINS", f"https://{dominio_real}")
+            await coolify.redeploy(backend_uuid)
+
+        # 5. Esperar a que el backend responda /health antes de crear el admin
+        backend_listo = False
+        if url_backend:
+            async with httpx.AsyncClient(timeout=10) as client:
+                for _ in range(10):
+                    try:
+                        resp = await client.get(f"{url_backend}/health")
+                        if resp.status_code == 200:
+                            backend_listo = True
+                            break
+                    except Exception:
+                        pass
+                    await asyncio.sleep(5)
+
+        # 6. Crear el primer usuario admin de esa instancia (una sola vez, vía bootstrap)
+        password_admin = secrets.token_urlsafe(10)
+        correo_admin = f"admin@{tenant.slug}.com"
+
+        if backend_listo and url_backend:
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.post(
+                    f"{url_backend}/setup/admin-inicial",
+                    json={
+                        "clave_bootstrap": bootstrap_secret,
+                        "nombre": "Administrador",
+                        "correo": correo_admin,
+                        "password": password_admin,
+                    },
+                )
+                resp.raise_for_status()
+
+            tenant.admin_correo_generado = correo_admin
+            tenant.admin_password_generada = password_admin
+
         tenant.coolify_app_uuid = frontend_uuid
         tenant.backend_uuid = backend_uuid
         tenant.coolify_db_uuid = db_uuid
+        tenant.dominio_backend = dominio_backend
         tenant.estado = m.EstadoTenantEnum.activo
 
         db.add(m.HistorialProvisionamiento(
             id_tenant=tenant.id, accion="crear", resultado="exito",
-            detalle=f"backend={backend_uuid}, frontend={frontend_uuid}, db={db_uuid}",
+            detalle=f"backend={backend_uuid}, frontend={frontend_uuid}, db={db_uuid}, admin_creado={backend_listo}",
         ))
 
     except Exception as e:
@@ -127,6 +163,8 @@ async def pausar_tenant(id_tenant: int, db: Session = Depends(get_db)):
     coolify = CoolifyService()
     try:
         await coolify.pausar(tenant.coolify_app_uuid)
+        if tenant.backend_uuid:
+            await coolify.pausar(tenant.backend_uuid)
         tenant.estado = m.EstadoTenantEnum.suspendido
         db.add(m.HistorialProvisionamiento(id_tenant=tenant.id, accion="pausar", resultado="exito"))
     except Exception as e:
@@ -146,6 +184,8 @@ async def reanudar_tenant(id_tenant: int, db: Session = Depends(get_db)):
     coolify = CoolifyService()
     try:
         await coolify.reanudar(tenant.coolify_app_uuid)
+        if tenant.backend_uuid:
+            await coolify.reanudar(tenant.backend_uuid)
         tenant.estado = m.EstadoTenantEnum.activo
         db.add(m.HistorialProvisionamiento(id_tenant=tenant.id, accion="reanudar", resultado="exito"))
     except Exception as e:
@@ -154,7 +194,6 @@ async def reanudar_tenant(id_tenant: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(tenant)
     return tenant
-
 
 
 @router.post("/{id_tenant}/redeploy", response_model=s.TenantOut)
@@ -180,7 +219,6 @@ async def redeploy_tenant(id_tenant: int, db: Session = Depends(get_db)):
     return tenant
 
 
-
 @router.delete("/{id_tenant}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_tenant(id_tenant: int, db: Session = Depends(get_db)):
     tenant = db.query(m.Tenant).filter(m.Tenant.id == id_tenant).first()
@@ -193,7 +231,7 @@ async def eliminar_tenant(id_tenant: int, db: Session = Depends(get_db)):
         try:
             await coolify.eliminar_aplicacion(tenant.backend_uuid)
         except Exception:
-            pass  # seguimos intentando borrar lo demás aunque uno falle
+            pass
 
     if tenant.coolify_app_uuid:
         try:
@@ -213,7 +251,6 @@ async def eliminar_tenant(id_tenant: int, db: Session = Depends(get_db)):
 
 @router.get("/{id_tenant}/historial")
 def historial_tenant(id_tenant: int, db: Session = Depends(get_db)):
-    """ENDPOINT TEMPORAL — para depurar errores de provisionamiento."""
     registros = (
         db.query(m.HistorialProvisionamiento)
         .filter(m.HistorialProvisionamiento.id_tenant == id_tenant)
@@ -232,9 +269,6 @@ def obtener_tenant(id_tenant: int, db: Session = Depends(get_db)):
     if not tenant:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant no encontrado")
     return tenant
-
-
-
 
 
 @router.get("/estado", response_model=s.TenantEstadoOut)

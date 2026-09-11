@@ -48,6 +48,7 @@
                 >
                   {{ redesplegandoId() === t.id ? 'Redesplegando...' : '↻ Redeploy' }}
                 </button>
+                <button class="btn-secundario" (click)="verCredenciales(t)">🔑 Ver acceso</button>
                 <button class="btn-eliminar" (click)="abrirConfirmarEliminar(t)">
                   🗑️ Eliminar
                 </button>
@@ -134,4 +135,42 @@
       </div>
     </div>
   }
+
+
+
+
+
+    @if (modalCredencialesAbierto()) {
+    <div class="modal-overlay" (click)="cerrarCredenciales()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Acceso — {{ tenantCredenciales()?.nombre_comercial }}</h2>
+          <button class="btn-cerrar" (click)="cerrarCredenciales()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="campo">
+            <label>Sitio público</label>
+            <input type="text" readonly [value]="'https://' + (tenantCredenciales()?.dominio ?? '')" />
+          </div>
+          <div class="campo">
+            <label>API / Backend</label>
+            <input type="text" readonly [value]="'https://' + (tenantCredenciales()?.dominio_backend ?? '')" />
+          </div>
+          <div class="campo">
+            <label>Correo admin</label>
+            <input type="text" readonly [value]="tenantCredenciales()?.admin_correo_generado ?? 'No generado'" />
+          </div>
+          <div class="campo">
+            <label>Contraseña admin</label>
+            <input type="text" readonly [value]="tenantCredenciales()?.admin_password_generada ?? 'No generado'" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" (click)="cerrarCredenciales()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  
 </div>

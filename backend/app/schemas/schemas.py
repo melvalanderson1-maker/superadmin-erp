@@ -41,6 +41,9 @@ class TenantOut(ORMBase):
     created_at: datetime
     coolify_app_uuid: Optional[str] = None
     backend_uuid: Optional[str] = None
+    dominio_backend: Optional[str] = None
+    admin_correo_generado: Optional[str] = None
+    admin_password_generada: Optional[str] = None
 
 
 class TenantEstadoOut(BaseModel):

@@ -41,6 +41,9 @@ class Tenant(Base):
     coolify_app_uuid = Column(String(100))   # frontend
     backend_uuid = Column(String(100))       # backend
     coolify_db_uuid = Column(String(100))
+    dominio_backend = Column(String(200))
+    admin_correo_generado = Column(String(200))
+    admin_password_generada = Column(String(100))
 
     db_host = Column(String(200))
     db_nombre = Column(String(100))

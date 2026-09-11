@@ -109,3 +109,7 @@ class CoolifyService:
     async def eliminar_base_datos(self, db_uuid: str) -> None:
         async with httpx.AsyncClient(timeout=30) as client:
             await client.delete(f"{self.base_url}/databases/{db_uuid}", headers=self.headers)
+
+
+    async def obtener_aplicacion(self, app_uuid: str) -> dict:
+        return await self._get(f"/applications/{app_uuid}")

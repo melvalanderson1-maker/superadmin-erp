@@ -149,4 +149,18 @@ export class TenantsListComponent implements OnInit {
       },
     });
   }
+
+
+
+  modalCredencialesAbierto = signal(false);
+    tenantCredenciales = signal<Tenant | null>(null);
+
+    verCredenciales(tenant: Tenant): void {
+      this.tenantCredenciales.set(tenant);
+      this.modalCredencialesAbierto.set(true);
+    }
+
+    cerrarCredenciales(): void {
+      this.modalCredencialesAbierto.set(false);
+  }
 }
