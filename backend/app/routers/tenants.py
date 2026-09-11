@@ -81,11 +81,31 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         dominio_backend = info_backend.get("fqdn", "").replace("https://", "").replace("http://", "").strip(",")
         url_backend = f"https://{dominio_backend}" if dominio_backend else None
 
-        # 3. Frontend — ya conocemos la URL del backend, se la pasamos como API_URL
+        # 2b. Esperamos a que el backend TERMINE de compilar y responda /health
+        # antes de lanzar el build del frontend. Dos "npm run build" a la vez
+        # revientan la memoria del servidor y el build muere sin log (exit 255).
+        backend_listo = False
+        if url_backend:
+            async with httpx.AsyncClient(timeout=10) as client:
+                for _ in range(18):
+                    try:
+                        resp = await client.get(f"{url_backend}/health")
+                        if resp.status_code == 200:
+                            backend_listo = True
+                            break
+                    except Exception:
+                        pass
+                    await asyncio.sleep(5)
+
+        # 3. Frontend — recién ahora, con el build del backend ya liberado
         res_frontend = await coolify.crear_frontend(tenant.slug, "")
         frontend_uuid = res_frontend.get("uuid")
         await coolify.set_env_var(frontend_uuid, "API_URL", url_backend or "")
         await coolify.deploy(frontend_uuid)
+
+        # Damos tiempo a que el build del frontend termine antes de tocar
+        # el backend otra vez (paso 4) — un build a la vez, siempre.
+        await asyncio.sleep(45)
 
         info_frontend = await coolify.obtener_aplicacion(frontend_uuid)
         dominio_real = info_frontend.get("fqdn", "").replace("https://", "").replace("http://", "").strip(",")
@@ -98,7 +118,7 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
             await coolify.set_env_var(backend_uuid, "CORS_ORIGINS", f"https://{dominio_real}")
             await coolify.redeploy(backend_uuid)
 
-        # 5. Esperar a que el backend responda /health antes de crear el admin
+        # 5. Re-confirmar /health después del redeploy de CORS
         backend_listo = False
         if url_backend:
             async with httpx.AsyncClient(timeout=10) as client:
