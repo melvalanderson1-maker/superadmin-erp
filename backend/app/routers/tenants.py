@@ -118,11 +118,14 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
             await coolify.set_env_var(backend_uuid, "CORS_ORIGINS", f"https://{dominio_real}")
             await coolify.redeploy(backend_uuid)
 
-        # 5. Re-confirmar /health después del redeploy de CORS
+        # 5. Re-confirmar /health después del redeploy de CORS.
+        # Esperamos 10s antes de empezar a preguntar (el contenedor tarda
+        # en reiniciar) y damos más intentos (15 x 5s = 75s adicionales).
         backend_listo = False
         if url_backend:
+            await asyncio.sleep(10)
             async with httpx.AsyncClient(timeout=10) as client:
-                for _ in range(10):
+                for _ in range(15):
                     try:
                         resp = await client.get(f"{url_backend}/health")
                         if resp.status_code == 200:

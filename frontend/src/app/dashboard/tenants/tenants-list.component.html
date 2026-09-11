@@ -98,6 +98,20 @@
               <input type="color" [(ngModel)]="form.color_secundario" />
             </div>
           </div>
+
+          @if (guardando()) {
+            <div class="campo" style="margin-top: 14px;">
+              <p style="font-size: 13px; color: #465264; margin: 0;">
+                {{ pasosCreacion[pasoActual()] }}
+              </p>
+              <div style="height: 6px; background: #e5e9ef; border-radius: 3px; margin-top: 8px; overflow: hidden;">
+                <div
+                  style="height: 100%; background: #173a70; transition: width 0.4s ease;"
+                  [style.width.%]="((pasoActual() + 1) / pasosCreacion.length) * 100"
+                ></div>
+              </div>
+            </div>
+          }
         </div>
 
         <div class="modal-footer">
@@ -107,6 +121,8 @@
           </button>
         </div>
       </div>
+
+      
     </div>
   }
 
@@ -172,5 +188,5 @@
     </div>
   }
 
-  
+
 </div>
