@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -21,25 +23,37 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
     if existe:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ya existe un tenant con ese slug")
 
-    tenant = m.Tenant(**payload.model_dump(), estado=m.EstadoTenantEnum.provisionando)
+    datos_tenant = payload.model_dump()
+    if not datos_tenant.get("dominio"):
+        # Sin dominio real todavía (modo prueba): placeholder único por slug.
+        # Se sobreescribe más abajo con el .sslip.io real que genere Coolify.
+        datos_tenant["dominio"] = f"pendiente-{payload.slug}.local"
+
+    tenant = m.Tenant(**datos_tenant, estado=m.EstadoTenantEnum.provisionando)
     db.add(tenant)
     db.commit()
     db.refresh(tenant)
 
     coolify = CoolifyService()
-    dominio_publico = tenant.dominio
-    dominio_api = f"api.{tenant.dominio}"
+    # Mientras el cliente no tenga dominio propio, dejamos que Coolify
+    # autogenere un subdominio .sslip.io (igual que hizo con el Super Admin).
+    dominio_publico = ""
+    dominio_api = ""
 
     try:
         # 1. Base de datos
         res_db = await coolify.crear_base_datos(tenant.slug)
         db_uuid = res_db.get("uuid")
+        database_url = res_db.get("internal_db_url")
+        secret_key = secrets.token_urlsafe(32)
 
         # 2. Backend
         res_backend = await coolify.crear_backend(tenant.slug, dominio_api)
         backend_uuid = res_backend.get("uuid")
 
         # 3. Variables de entorno del backend (identidad de marca + licencia)
+        await coolify.set_env_var(backend_uuid, "DATABASE_URL", database_url)
+        await coolify.set_env_var(backend_uuid, "SECRET_KEY", secret_key)
         await coolify.set_env_var(backend_uuid, "EMPRESA_NOMBRE", tenant.nombre_comercial)
         await coolify.set_env_var(backend_uuid, "EMPRESA_SLUG", tenant.slug)
         await coolify.set_env_var(backend_uuid, "EMPRESA_DOMINIO", dominio_publico)
@@ -58,6 +72,13 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         # 5. Deploy de ambos
         await coolify.deploy(backend_uuid)
         await coolify.deploy(frontend_uuid)
+
+        # Coolify ya autogeneró un dominio .sslip.io para cada app —
+        # lo leemos y lo guardamos como el dominio real de acceso.
+        info_frontend = await coolify.obtener_aplicacion(frontend_uuid)
+        dominio_real = info_frontend.get("fqdn", "").replace("https://", "").replace("http://", "").strip(",")
+        if dominio_real:
+            tenant.dominio = dominio_real
 
         tenant.coolify_app_uuid = frontend_uuid
         tenant.coolify_db_uuid = db_uuid
@@ -125,12 +146,7 @@ def obtener_tenant(id_tenant: int, db: Session = Depends(get_db)):
     return tenant
 
 
-@router.post("/debug/test-db/{slug_prueba}")
-async def debug_test_crear_bd(slug_prueba: str):
-    """ENDPOINT TEMPORAL — solo para ver qué devuelve Coolify. Borrar después."""
-    coolify = CoolifyService()
-    res_db = await coolify.crear_base_datos(slug_prueba)
-    return res_db
+
 
 
 @router.get("/estado", response_model=s.TenantEstadoOut)

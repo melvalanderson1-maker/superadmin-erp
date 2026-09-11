@@ -83,8 +83,8 @@ export class TenantsListComponent implements OnInit {
   }
 
   guardar(): void {
-    if (!this.form.nombre_comercial || !this.form.slug || !this.form.dominio) {
-      this.error.set('Completa nombre, slug y dominio');
+    if (!this.form.nombre_comercial || !this.form.slug) {
+      this.error.set('Completa nombre y slug');
       return;
     }
 

@@ -77,6 +77,12 @@ class CoolifyService:
         payload = {"key": clave, "value": valor, "is_preview": False}
         await self._post(f"/applications/{app_uuid}/envs", payload)
 
+    async def obtener_aplicacion(self, app_uuid: str) -> dict:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.get(f"{self.base_url}/applications/{app_uuid}", headers=self.headers)
+            resp.raise_for_status()
+            return resp.json()
+
     async def deploy(self, app_uuid: str) -> None:
         async with httpx.AsyncClient(timeout=60) as client:
             await client.post(
