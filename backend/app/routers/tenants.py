@@ -25,9 +25,14 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
     if existe:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ya existe un tenant con ese slug")
 
+    dominio_base = (payload.dominio or "").strip().lower()
+    usar_dominio_propio = bool(dominio_base)
+
+    dominio_frontend = f"{payload.slug}.{dominio_base}" if usar_dominio_propio else ""
+    dominio_backend = f"api-{payload.slug}.{dominio_base}" if usar_dominio_propio else ""
+
     datos_tenant = payload.model_dump()
-    if not datos_tenant.get("dominio"):
-        datos_tenant["dominio"] = f"pendiente-{payload.slug}.local"
+    datos_tenant["dominio"] = dominio_frontend if usar_dominio_propio else f"pendiente-{payload.slug}.local"
 
     tenant = m.Tenant(**datos_tenant, estado=m.EstadoTenantEnum.provisionando)
     db.add(tenant)
@@ -59,7 +64,7 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         bootstrap_secret = secrets.token_urlsafe(24)
 
         # 2. Backend — se crea y despliega PRIMERO, para conocer su dominio real
-        res_backend = await coolify.crear_backend(tenant.slug, "", database_url)
+        res_backend = await coolify.crear_backend(tenant.slug, dominio_backend, database_url)
         backend_uuid = res_backend.get("uuid")
 
         await coolify.set_env_var(backend_uuid, "DATABASE_URL", database_url)
@@ -98,7 +103,7 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
                     await asyncio.sleep(5)
 
         # 3. Frontend — recién ahora, con el build del backend ya liberado
-        res_frontend = await coolify.crear_frontend(tenant.slug, "")
+        res_frontend = await coolify.crear_frontend(tenant.slug, dominio_frontend)
         frontend_uuid = res_frontend.get("uuid")
         await coolify.set_env_var(frontend_uuid, "API_URL", url_backend or "")
         await coolify.deploy(frontend_uuid)
@@ -109,13 +114,13 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
 
         info_frontend = await coolify.obtener_aplicacion(frontend_uuid)
         dominio_real = info_frontend.get("fqdn", "").replace("https://", "").replace("http://", "").strip(",")
-        if dominio_real:
+        if dominio_real and not usar_dominio_propio:
             tenant.dominio = dominio_real
 
         # 4. Actualizamos el backend con el dominio real del frontend (para CORS) y redeploy
-        if dominio_real:
-            await coolify.set_env_var(backend_uuid, "EMPRESA_DOMINIO", dominio_real)
-            await coolify.set_env_var(backend_uuid, "CORS_ORIGINS", f"https://{dominio_real}")
+        if tenant.dominio:
+            await coolify.set_env_var(backend_uuid, "EMPRESA_DOMINIO", tenant.dominio)
+            await coolify.set_env_var(backend_uuid, "CORS_ORIGINS", f"https://{tenant.dominio}")
             await coolify.redeploy(backend_uuid)
 
         # 5. Re-confirmar /health después del redeploy de CORS.

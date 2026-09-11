@@ -84,8 +84,11 @@
           </div>
 
           <div class="campo">
-            <label>Dominio (opcional)</label>
-            <input type="text" [(ngModel)]="form.dominio" placeholder="Déjalo vacío para pruebas — se autogenera con Coolify" />
+            <label>Dominio propio (opcional)</label>
+            <input type="text" [(ngModel)]="form.dominio" placeholder="Ej: inmobilot.com — vacío = sslip.io de prueba" />
+            <small style="font-size:12px;color:#8993a2;">
+              Quedará como <strong>{{ form.slug || 'slug' }}.{{ form.dominio || 'tudominio.com' }}</strong>
+            </small>
           </div>
 
           <div class="campo-doble">
