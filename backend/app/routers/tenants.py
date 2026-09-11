@@ -119,21 +119,26 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
             await coolify.redeploy(backend_uuid)
 
         # 5. Re-confirmar /health después del redeploy de CORS.
-        # Esperamos 10s antes de empezar a preguntar (el contenedor tarda
-        # en reiniciar) y damos más intentos (15 x 5s = 75s adicionales).
+        # El certificado SSL de Let's Encrypt para el dominio .sslip.io
+        # puede tardar 1-3 min en emitirse — por eso el presupuesto es alto
+        # (hasta ~4 min) y guardamos el último error real para diagnosticar
+        # si sigue fallando (SSL vs. contenedor caído vs. otra cosa).
         backend_listo = False
+        ultimo_error_health = None
         if url_backend:
             await asyncio.sleep(10)
             async with httpx.AsyncClient(timeout=10) as client:
-                for _ in range(15):
+                for _ in range(24):
                     try:
                         resp = await client.get(f"{url_backend}/health")
                         if resp.status_code == 200:
                             backend_listo = True
                             break
-                    except Exception:
-                        pass
-                    await asyncio.sleep(5)
+                        ultimo_error_health = f"HTTP {resp.status_code}"
+                    except Exception as e:
+                        ultimo_error_health = str(e)
+                    await asyncio.sleep(8)
+
 
         # 6. Crear el primer usuario admin de esa instancia (una sola vez, vía bootstrap)
         password_admin = secrets.token_urlsafe(10)
@@ -163,7 +168,11 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
 
         db.add(m.HistorialProvisionamiento(
             id_tenant=tenant.id, accion="crear", resultado="exito",
-            detalle=f"backend={backend_uuid}, frontend={frontend_uuid}, db={db_uuid}, admin_creado={backend_listo}",
+            detalle=(
+                f"backend={backend_uuid}, frontend={frontend_uuid}, db={db_uuid}, "
+                f"admin_creado={backend_listo}, "
+                f"ultimo_error_health={ultimo_error_health if not backend_listo else 'n/a'}"
+            ),
         ))
 
     except Exception as e:

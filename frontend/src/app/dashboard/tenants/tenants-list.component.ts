@@ -84,16 +84,8 @@ export class TenantsListComponent implements OnInit {
       .replace(/(^-|-$)/g, '');
   }
 
-  pasosCreacion = [
-    'Creando base de datos...',
-    'Desplegando backend...',
-    'Esperando que el backend arranque...',
-    'Desplegando frontend...',
-    'Configurando dominio y CORS...',
-    'Creando usuario administrador...',
-  ];
-  pasoActual = signal(0);
-  private timerPasos: any = null;
+  tiempoTranscurrido = signal(0);
+  private timerReloj: any = null;
 
   guardar(): void {
     if (!this.form.nombre_comercial || !this.form.slug) {
@@ -103,24 +95,21 @@ export class TenantsListComponent implements OnInit {
 
     this.guardando.set(true);
     this.error.set(null);
-    this.pasoActual.set(0);
+    this.tiempoTranscurrido.set(0);
 
-    // El proceso real dura ~2 min (dos builds serializados + health checks).
-    // Avanzamos el mensaje cada ~20s para que el loader se sienta acorde
-    // al tiempo real, sin depender de que el backend reporte progreso.
-    this.timerPasos = setInterval(() => {
-      this.pasoActual.update((p) => Math.min(p + 1, this.pasosCreacion.length - 1));
-    }, 20000);
+    this.timerReloj = setInterval(() => {
+      this.tiempoTranscurrido.update((s) => s + 1);
+    }, 1000);
 
     this.tenantService.crear(this.form).subscribe({
       next: () => {
-        clearInterval(this.timerPasos);
+        clearInterval(this.timerReloj);
         this.guardando.set(false);
         this.modalAbierto.set(false);
         this.cargarTenants();
       },
       error: (err) => {
-        clearInterval(this.timerPasos);
+        clearInterval(this.timerReloj);
         this.guardando.set(false);
         this.error.set(err?.error?.detail ?? 'Error al crear la inmobiliaria');
       },
