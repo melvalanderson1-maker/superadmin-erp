@@ -52,7 +52,11 @@ class Tenant(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     plan = relationship("Plan")
-    historial = relationship("HistorialProvisionamiento", back_populates="tenant")
+    historial = relationship(
+        "HistorialProvisionamiento",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
 
 
 class HistorialProvisionamiento(Base):
