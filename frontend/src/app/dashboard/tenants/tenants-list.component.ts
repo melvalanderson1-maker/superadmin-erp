@@ -20,6 +20,8 @@ export class TenantsListComponent implements OnInit {
   guardando = signal(false);
   error = signal<string | null>(null);
 
+  redesplegandoId = signal<number | null>(null);
+
   form: TenantCreate = {
     nombre_comercial: '',
     slug: '',
@@ -101,6 +103,17 @@ export class TenantsListComponent implements OnInit {
         this.guardando.set(false);
         this.error.set(err?.error?.detail ?? 'Error al crear la inmobiliaria');
       },
+    });
+  }
+
+  redeploy(tenant: Tenant): void {
+    this.redesplegandoId.set(tenant.id);
+    this.tenantService.redeploy(tenant.id).subscribe({
+      next: () => {
+        this.redesplegandoId.set(null);
+        this.cargarTenants();
+      },
+      error: () => this.redesplegandoId.set(null),
     });
   }
 }
