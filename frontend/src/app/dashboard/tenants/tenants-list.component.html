@@ -227,9 +227,21 @@
               <input type="color" [(ngModel)]="coloresForm.color_secundario" />
             </div>
           </div>
+
+          <div class="campo">
+            <label>WhatsApp (con código de país, ej: 51987654321)</label>
+            <input type="text" [(ngModel)]="contactoForm.whatsapp" placeholder="51987654321" />
+          </div>
+          <div class="campo">
+            <label>Correo de contacto</label>
+            <input type="email" [(ngModel)]="contactoForm.correo_contacto" placeholder="ventas@inmobiliaria.com" />
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn-secundario" (click)="cerrarMarca()">Cerrar</button>
+          <button class="btn-secundario" (click)="guardarContacto()" [disabled]="guardandoContacto()">
+            {{ guardandoContacto() ? 'Guardando...' : 'Guardar contacto' }}
+          </button>
           <button class="btn-primary" (click)="guardarColores()" [disabled]="guardandoColores()">
             {{ guardandoColores() ? 'Guardando...' : 'Guardar colores' }}
           </button>

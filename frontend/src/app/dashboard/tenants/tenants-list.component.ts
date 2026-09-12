@@ -179,12 +179,18 @@ export class TenantsListComponent implements OnInit {
   subiendoMarca = signal<string | null>(null);
   coloresForm = { color_primario: '#1d4ed8', color_secundario: '#0f172a' };
   guardandoColores = signal(false);
+  contactoForm = { whatsapp: '', correo_contacto: '' };
+  guardandoContacto = signal(false);
 
   abrirMarca(tenant: Tenant): void {
     this.tenantMarca.set(tenant);
     this.coloresForm = {
       color_primario: tenant.color_primario,
       color_secundario: tenant.color_secundario,
+    };
+    this.contactoForm = {
+      whatsapp: tenant.whatsapp ?? '',
+      correo_contacto: tenant.correo_contacto ?? '',
     };
     this.modalMarcaAbierto.set(true);
   }
@@ -223,6 +229,21 @@ export class TenantsListComponent implements OnInit {
         this.cargarTenants();
       },
       error: () => this.guardandoColores.set(false),
+    });
+  }
+
+  guardarContacto(): void {
+    const tenant = this.tenantMarca();
+    if (!tenant) return;
+
+    this.guardandoContacto.set(true);
+    this.tenantService.actualizarContacto(tenant.id, this.contactoForm).subscribe({
+      next: (actualizado) => {
+        this.tenantMarca.set(actualizado);
+        this.guardandoContacto.set(false);
+        this.cargarTenants();
+      },
+      error: () => this.guardandoContacto.set(false),
     });
   }
 }

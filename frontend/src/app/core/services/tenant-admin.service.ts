@@ -36,4 +36,8 @@ export class TenantAdminService {
   actualizarColores(id: number, payload: { color_primario: string; color_secundario: string }) {
     return this.api.patch<Tenant>(`/tenants/${id}/colores`, payload);
   }
+
+  actualizarContacto(id: number, payload: { whatsapp?: string; correo_contacto?: string }) {
+    return this.api.patch<Tenant>(`/tenants/${id}/contacto`, payload);
+  }
 }

@@ -353,6 +353,47 @@ async def actualizar_colores_tenant(
     return tenant
 
 
+@router.patch("/{id_tenant}/contacto", response_model=s.TenantOut)
+async def actualizar_contacto_tenant(
+    id_tenant: int,
+    payload: s.TenantContactoUpdate,
+    db: Session = Depends(get_db),
+):
+    tenant = db.query(m.Tenant).filter(m.Tenant.id == id_tenant).first()
+    if not tenant:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant no encontrado")
+
+    if not tenant.backend_uuid:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Este tenant no tiene backend_uuid registrado — no se puede actualizar",
+        )
+
+    try:
+        coolify = CoolifyService()
+        if payload.whatsapp is not None:
+            tenant.whatsapp = payload.whatsapp
+            await coolify.set_env_var(tenant.backend_uuid, "EMPRESA_WHATSAPP", payload.whatsapp)
+        if payload.correo_contacto is not None:
+            tenant.correo_contacto = payload.correo_contacto
+            await coolify.set_env_var(tenant.backend_uuid, "EMPRESA_CORREO_CONTACTO", payload.correo_contacto)
+        await coolify.redeploy(tenant.backend_uuid)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo actualizar el contacto en Coolify: {e}",
+        )
+
+    db.add(m.HistorialProvisionamiento(
+        id_tenant=tenant.id, accion="actualizar_contacto", resultado="exito",
+        detalle=f"whatsapp={payload.whatsapp}, correo={payload.correo_contacto}",
+    ))
+
+    db.commit()
+    db.refresh(tenant)
+    return tenant
+
+
 @router.post("/{id_tenant}/pausar", response_model=s.TenantOut)
 async def pausar_tenant(id_tenant: int, db: Session = Depends(get_db)):
     tenant = db.query(m.Tenant).filter(m.Tenant.id == id_tenant).first()

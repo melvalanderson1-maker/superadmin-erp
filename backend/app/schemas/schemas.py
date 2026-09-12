@@ -47,7 +47,8 @@ class TenantOut(ORMBase):
     logo_url: Optional[str] = None
     mascota_url: Optional[str] = None
     hero_url: Optional[str] = None
-
+    whatsapp: Optional[str] = None
+    correo_contacto: Optional[str] = None
 
 class TenantEstadoOut(BaseModel):
     """Lo que consulta el ERP de cada cliente para saber si sigue activo."""
@@ -60,3 +61,8 @@ class TenantEstadoOut(BaseModel):
 class TenantColoresUpdate(BaseModel):
     color_primario: str
     color_secundario: str
+
+
+class TenantContactoUpdate(BaseModel):
+    whatsapp: Optional[str] = None
+    correo_contacto: Optional[str] = None

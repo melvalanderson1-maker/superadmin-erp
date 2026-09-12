@@ -46,6 +46,8 @@ class Tenant(Base):
     logo_url = Column(String(300))
     mascota_url = Column(String(300))
     hero_url = Column(String(300))
+    whatsapp = Column(String(30))
+    correo_contacto = Column(String(200))
 
     db_host = Column(String(200))
     db_nombre = Column(String(100))
