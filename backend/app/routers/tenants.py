@@ -25,7 +25,18 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
     if existe:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ya existe un tenant con ese slug")
 
-    dominio_base = (payload.dominio or "").strip().lower()
+    import re
+
+    def _limpiar_dominio(valor: str) -> str:
+        """Acepta 'tenants.gruecolimp.com', 'http://tenants.gruecolimp.com/',
+        'https://tenants.gruecolimp.com' — siempre devuelve solo el host limpio."""
+        valor = valor.strip().lower()
+        valor = re.sub(r"^https?://", "", valor)  # quita el protocolo si lo pegaron
+        valor = valor.rstrip("/")                  # quita la barra final
+        valor = valor.split("/")[0]                 # por si pegaron una ruta después
+        return valor
+
+    dominio_base = _limpiar_dominio(payload.dominio or "")
     usar_dominio_propio = bool(dominio_base)
 
     dominio_frontend = f"{payload.slug}.{dominio_base}" if usar_dominio_propio else ""
