@@ -63,7 +63,6 @@ class CoolifyService:
         — sin esto, cada redeploy borra todo lo subido, porque nace un
         contenedor nuevo desde la imagen del repo."""
         payload = {
-            "type": "volume",
             "name": f"static-{nombre_tenant_slug}",
             "mount_path": "/app/app/static",
         }
