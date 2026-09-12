@@ -67,7 +67,14 @@ class CoolifyService:
             "name": f"static-{nombre_tenant_slug}",
             "mount_path": "/app/app/static",
         }
-        await self._post(f"/applications/{app_uuid}/storages", payload)
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                f"{self.base_url}/applications/{app_uuid}/storages",
+                headers=self.headers,
+                json=payload,
+            )
+            if resp.status_code >= 400:
+                raise RuntimeError(f"Coolify rechazó el volumen (status {resp.status_code}): {resp.text}")
 
     async def crear_frontend(self, nombre_tenant_slug: str, dominio_publico: str) -> dict:
         payload = {
