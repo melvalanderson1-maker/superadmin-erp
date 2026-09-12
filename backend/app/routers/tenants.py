@@ -233,31 +233,58 @@ async def subir_imagen_marca(
             detail="Este tenant no tiene credenciales de admin generadas todavía — no se puede subir su marca",
         )
 
-    url_backend = f"https://{tenant.dominio_backend}"
+    # Probamos http y https — algunos tenants todavía no tienen certificado
+    # SSL real (sslip.io con rate-limit), así que si https falla, caemos a http.
+    esquemas = ["https", "http"]
+    ultimo_error = None
+    token = None
+    url_backend_usada = None
 
     async with httpx.AsyncClient(timeout=30) as client:
-        # 1. Login como el admin de ese tenant para conseguir un token válido
-        resp_login = await client.post(
-            f"{url_backend}/auth/login-json",
-            json={"correo": tenant.admin_correo_generado, "password": tenant.admin_password_generada},
-        )
-        resp_login.raise_for_status()
-        token = resp_login.json()["access_token"]
+        for esquema in esquemas:
+            url_backend = f"{esquema}://{tenant.dominio_backend}"
+            try:
+                resp_login = await client.post(
+                    f"{url_backend}/auth/login-json",
+                    json={"correo": tenant.admin_correo_generado, "password": tenant.admin_password_generada},
+                )
+                resp_login.raise_for_status()
+                token = resp_login.json()["access_token"]
+                url_backend_usada = url_backend
+                break
+            except Exception as e:
+                ultimo_error = str(e)
 
-        # 2. Subimos el archivo directo al backend del tenant, con ese token
-        contenido = await archivo.read()
-        resp_upload = await client.post(
-            f"{url_backend}/uploads/imagen-marca",
-            headers={"Authorization": f"Bearer {token}"},
-            files={"archivo": (archivo.filename, contenido, archivo.content_type)},
-        )
-        resp_upload.raise_for_status()
-        url_relativa = resp_upload.json()["url"]
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"No se pudo iniciar sesión en el backend del tenant ({tenant.dominio_backend}): {ultimo_error}",
+            )
 
-    # 3. Persistimos como env var del backend y redesplegamos para que tome el cambio
-    coolify = CoolifyService()
-    await coolify.set_env_var(tenant.backend_uuid, mapa_env[tipo], url_relativa)
-    await coolify.redeploy(tenant.backend_uuid)
+        try:
+            contenido = await archivo.read()
+            resp_upload = await client.post(
+                f"{url_backend_usada}/uploads/imagen-marca",
+                headers={"Authorization": f"Bearer {token}"},
+                files={"archivo": (archivo.filename, contenido, archivo.content_type)},
+            )
+            resp_upload.raise_for_status()
+            url_relativa = resp_upload.json()["url"]
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"El backend del tenant rechazó la subida: {e}",
+            )
+
+    try:
+        coolify = CoolifyService()
+        await coolify.set_env_var(tenant.backend_uuid, mapa_env[tipo], url_relativa)
+        await coolify.redeploy(tenant.backend_uuid)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"La imagen se subió pero no se pudo guardar en Coolify: {e}",
+        )
 
     # 4. Guardamos también localmente, para mostrarla en el panel sin preguntarle al tenant cada vez
     if tipo == "logo":
@@ -290,11 +317,22 @@ async def actualizar_colores_tenant(
     tenant.color_primario = payload.color_primario
     tenant.color_secundario = payload.color_secundario
 
-    coolify = CoolifyService()
     if tenant.backend_uuid:
-        await coolify.set_env_var(tenant.backend_uuid, "EMPRESA_COLOR_PRIMARIO", payload.color_primario)
-        await coolify.set_env_var(tenant.backend_uuid, "EMPRESA_COLOR_SECUNDARIO", payload.color_secundario)
-        await coolify.redeploy(tenant.backend_uuid)
+        try:
+            coolify = CoolifyService()
+            await coolify.set_env_var(tenant.backend_uuid, "EMPRESA_COLOR_PRIMARIO", payload.color_primario)
+            await coolify.set_env_var(tenant.backend_uuid, "EMPRESA_COLOR_SECUNDARIO", payload.color_secundario)
+            await coolify.redeploy(tenant.backend_uuid)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"No se pudo actualizar los colores en Coolify: {e}",
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Este tenant no tiene backend_uuid registrado — no se puede actualizar",
+        )
 
     db.add(m.HistorialProvisionamiento(
         id_tenant=tenant.id, accion="actualizar_colores", resultado="exito",
