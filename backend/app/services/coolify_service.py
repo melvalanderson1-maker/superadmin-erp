@@ -57,6 +57,17 @@ class CoolifyService:
         }
         return await self._post("/applications/public", payload)
 
+    async def crear_volumen_persistente(self, app_uuid: str, nombre_tenant_slug: str) -> None:
+        """Monta un volumen persistente para /app/app/static, para que las
+        imágenes subidas (marca, fotos de lotes) sobrevivan a los redeploys
+        — sin esto, cada redeploy borra todo lo subido, porque nace un
+        contenedor nuevo desde la imagen del repo."""
+        payload = {
+            "name": f"static-{nombre_tenant_slug}",
+            "mount_path": "/app/app/static",
+        }
+        await self._post(f"/applications/{app_uuid}/persistent-storages", payload)
+
     async def crear_frontend(self, nombre_tenant_slug: str, dominio_publico: str) -> dict:
         payload = {
             "project_uuid": self.project_uuid_erp,

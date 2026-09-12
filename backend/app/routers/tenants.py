@@ -78,6 +78,15 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         res_backend = await coolify.crear_backend(tenant.slug, dominio_backend, database_url)
         backend_uuid = res_backend.get("uuid")
 
+        try:
+            await coolify.crear_volumen_persistente(backend_uuid, tenant.slug)
+        except Exception as e:
+            # No abortamos el aprovisionamiento por esto — pero lo dejamos
+            # registrado, porque sin volumen las imágenes no van a persistir.
+            db.add(m.HistorialProvisionamiento(
+                id_tenant=tenant.id, accion="crear_volumen", resultado="error", detalle=str(e),
+            ))
+
         await coolify.set_env_var(backend_uuid, "DATABASE_URL", database_url)
         await coolify.set_env_var(backend_uuid, "SECRET_KEY", secret_key)
         await coolify.set_env_var(backend_uuid, "BOOTSTRAP_SECRET", bootstrap_secret)
