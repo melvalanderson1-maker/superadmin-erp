@@ -63,10 +63,11 @@ class CoolifyService:
         — sin esto, cada redeploy borra todo lo subido, porque nace un
         contenedor nuevo desde la imagen del repo."""
         payload = {
+            "type": "volume",
             "name": f"static-{nombre_tenant_slug}",
             "mount_path": "/app/app/static",
         }
-        await self._post(f"/applications/{app_uuid}/persistent-storages", payload)
+        await self._post(f"/applications/{app_uuid}/storages", payload)
 
     async def crear_frontend(self, nombre_tenant_slug: str, dominio_publico: str) -> dict:
         payload = {
