@@ -74,8 +74,24 @@ class CoolifyService:
         return await self._post("/applications/public", payload)
 
     async def set_env_var(self, app_uuid: str, clave: str, valor: str) -> None:
+        # POST crea la variable si no existe. Si ya existe (caso normal para
+        # colores, que se fijan desde el aprovisionamiento inicial), Coolify
+        # responde 409 — en ese caso hay que actualizar con PATCH en vez de
+        # crear de nuevo.
         payload = {"key": clave, "value": valor, "is_preview": False}
-        await self._post(f"/applications/{app_uuid}/envs", payload)
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                f"{self.base_url}/applications/{app_uuid}/envs",
+                headers=self.headers,
+                json=payload,
+            )
+            if resp.status_code == 409:
+                resp = await client.patch(
+                    f"{self.base_url}/applications/{app_uuid}/envs",
+                    headers=self.headers,
+                    json=payload,
+                )
+            resp.raise_for_status()
 
     async def obtener_aplicacion(self, app_uuid: str) -> dict:
         async with httpx.AsyncClient(timeout=30) as client:
