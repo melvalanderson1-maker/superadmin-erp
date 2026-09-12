@@ -13,6 +13,8 @@ export interface Tenant {
   color_primario: string;
   color_secundario: string;
   logo_url?: string;
+  mascota_url?: string;
+  hero_url?: string;
   id_plan?: number;
   estado: EstadoTenant;
   fecha_vencimiento?: string;
