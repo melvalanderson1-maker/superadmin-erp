@@ -44,6 +44,9 @@ class TenantOut(ORMBase):
     dominio_backend: Optional[str] = None
     admin_correo_generado: Optional[str] = None
     admin_password_generada: Optional[str] = None
+    logo_url: Optional[str] = None
+    mascota_url: Optional[str] = None
+    hero_url: Optional[str] = None
 
 
 class TenantEstadoOut(BaseModel):
@@ -52,3 +55,8 @@ class TenantEstadoOut(BaseModel):
     estado: str
     fecha_vencimiento: Optional[date] = None
     activo: bool
+
+
+class TenantColoresUpdate(BaseModel):
+    color_primario: str
+    color_secundario: str

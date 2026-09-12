@@ -173,4 +173,56 @@ export class TenantsListComponent implements OnInit {
     cerrarCredenciales(): void {
       this.modalCredencialesAbierto.set(false);
   }
+
+  modalMarcaAbierto = signal(false);
+  tenantMarca = signal<Tenant | null>(null);
+  subiendoMarca = signal<string | null>(null);
+  coloresForm = { color_primario: '#1d4ed8', color_secundario: '#0f172a' };
+  guardandoColores = signal(false);
+
+  abrirMarca(tenant: Tenant): void {
+    this.tenantMarca.set(tenant);
+    this.coloresForm = {
+      color_primario: tenant.color_primario,
+      color_secundario: tenant.color_secundario,
+    };
+    this.modalMarcaAbierto.set(true);
+  }
+
+  cerrarMarca(): void {
+    this.modalMarcaAbierto.set(false);
+  }
+
+  onArchivoMarcaSeleccionado(tipo: 'logo' | 'mascota' | 'hero', event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const archivo = input.files?.[0];
+    const tenant = this.tenantMarca();
+    if (!archivo || !tenant) return;
+
+    this.subiendoMarca.set(tipo);
+    this.tenantService.subirMarca(tenant.id, tipo, archivo).subscribe({
+      next: (actualizado) => {
+        this.tenantMarca.set(actualizado);
+        this.subiendoMarca.set(null);
+        this.cargarTenants();
+      },
+      error: () => this.subiendoMarca.set(null),
+    });
+    input.value = '';
+  }
+
+  guardarColores(): void {
+    const tenant = this.tenantMarca();
+    if (!tenant) return;
+
+    this.guardandoColores.set(true);
+    this.tenantService.actualizarColores(tenant.id, this.coloresForm).subscribe({
+      next: (actualizado) => {
+        this.tenantMarca.set(actualizado);
+        this.guardandoColores.set(false);
+        this.cargarTenants();
+      },
+      error: () => this.guardandoColores.set(false),
+    });
+  }
 }

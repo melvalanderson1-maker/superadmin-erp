@@ -22,8 +22,18 @@ export class TenantAdminService {
     return this.api.post<Tenant>(`/tenants/${id}/redeploy`, {});
   }
 
-
   eliminar(id: number) {
     return this.api.delete<void>(`/tenants/${id}`);
+  }
+
+  subirMarca(id: number, tipo: 'logo' | 'mascota' | 'hero', archivo: File) {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    formData.append('tipo', tipo);
+    return this.api.post<Tenant>(`/tenants/${id}/marca`, formData);
+  }
+
+  actualizarColores(id: number, payload: { color_primario: string; color_secundario: string }) {
+    return this.api.patch<Tenant>(`/tenants/${id}/colores`, payload);
   }
 }

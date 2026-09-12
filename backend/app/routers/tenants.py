@@ -2,7 +2,7 @@ import asyncio
 import secrets
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -128,10 +128,16 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         if dominio_real and not usar_dominio_propio:
             tenant.dominio = dominio_real
 
-        # 4. Actualizamos el backend con el dominio real del frontend (para CORS) y redeploy
+        # 4. Actualizamos el backend con el dominio real del frontend (para CORS),
+        # y también le decimos su propio dominio público para que los archivos
+        # que suba (marca, comprobantes, fotos de lotes) se guarden con URL
+        # completa desde el día uno — sin que nadie más tenga que reconstruirla.
         if tenant.dominio:
             await coolify.set_env_var(backend_uuid, "EMPRESA_DOMINIO", tenant.dominio)
             await coolify.set_env_var(backend_uuid, "CORS_ORIGINS", f"https://{tenant.dominio}")
+        if dominio_backend:
+            await coolify.set_env_var(backend_uuid, "PUBLIC_URL_BASE", f"https://{dominio_backend}")
+        if tenant.dominio or dominio_backend:
             await coolify.redeploy(backend_uuid)
 
         # 5. Re-confirmar /health después del redeploy de CORS.
@@ -196,6 +202,104 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
         db.add(m.HistorialProvisionamiento(
             id_tenant=tenant.id, accion="crear", resultado="error", detalle=str(e),
         ))
+
+    db.commit()
+    db.refresh(tenant)
+    return tenant
+
+
+@router.post("/{id_tenant}/marca", response_model=s.TenantOut)
+async def subir_imagen_marca(
+    id_tenant: int,
+    tipo: str = Form(...),  # "logo" | "mascota" | "hero"
+    archivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    tenant = db.query(m.Tenant).filter(m.Tenant.id == id_tenant).first()
+    if not tenant:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant no encontrado")
+
+    mapa_env = {
+        "logo": "EMPRESA_LOGO_URL",
+        "mascota": "EMPRESA_MASCOTA_URL",
+        "hero": "EMPRESA_HERO_URL",
+    }
+    if tipo not in mapa_env:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="tipo debe ser logo, mascota o hero")
+
+    if not tenant.dominio_backend or not tenant.admin_correo_generado or not tenant.admin_password_generada:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Este tenant no tiene credenciales de admin generadas todavía — no se puede subir su marca",
+        )
+
+    url_backend = f"https://{tenant.dominio_backend}"
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        # 1. Login como el admin de ese tenant para conseguir un token válido
+        resp_login = await client.post(
+            f"{url_backend}/auth/login-json",
+            json={"correo": tenant.admin_correo_generado, "password": tenant.admin_password_generada},
+        )
+        resp_login.raise_for_status()
+        token = resp_login.json()["access_token"]
+
+        # 2. Subimos el archivo directo al backend del tenant, con ese token
+        contenido = await archivo.read()
+        resp_upload = await client.post(
+            f"{url_backend}/uploads/imagen-marca",
+            headers={"Authorization": f"Bearer {token}"},
+            files={"archivo": (archivo.filename, contenido, archivo.content_type)},
+        )
+        resp_upload.raise_for_status()
+        url_relativa = resp_upload.json()["url"]
+
+    # 3. Persistimos como env var del backend y redesplegamos para que tome el cambio
+    coolify = CoolifyService()
+    await coolify.set_env_var(tenant.backend_uuid, mapa_env[tipo], url_relativa)
+    await coolify.redeploy(tenant.backend_uuid)
+
+    # 4. Guardamos también localmente, para mostrarla en el panel sin preguntarle al tenant cada vez
+    if tipo == "logo":
+        tenant.logo_url = url_relativa
+    elif tipo == "mascota":
+        tenant.mascota_url = url_relativa
+    elif tipo == "hero":
+        tenant.hero_url = url_relativa
+
+    db.add(m.HistorialProvisionamiento(
+        id_tenant=tenant.id, accion=f"actualizar_{tipo}", resultado="exito",
+        detalle=f"url={url_relativa}",
+    ))
+
+    db.commit()
+    db.refresh(tenant)
+    return tenant
+
+
+@router.patch("/{id_tenant}/colores", response_model=s.TenantOut)
+async def actualizar_colores_tenant(
+    id_tenant: int,
+    payload: s.TenantColoresUpdate,
+    db: Session = Depends(get_db),
+):
+    tenant = db.query(m.Tenant).filter(m.Tenant.id == id_tenant).first()
+    if not tenant:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant no encontrado")
+
+    tenant.color_primario = payload.color_primario
+    tenant.color_secundario = payload.color_secundario
+
+    coolify = CoolifyService()
+    if tenant.backend_uuid:
+        await coolify.set_env_var(tenant.backend_uuid, "EMPRESA_COLOR_PRIMARIO", payload.color_primario)
+        await coolify.set_env_var(tenant.backend_uuid, "EMPRESA_COLOR_SECUNDARIO", payload.color_secundario)
+        await coolify.redeploy(tenant.backend_uuid)
+
+    db.add(m.HistorialProvisionamiento(
+        id_tenant=tenant.id, accion="actualizar_colores", resultado="exito",
+        detalle=f"primario={payload.color_primario}, secundario={payload.color_secundario}",
+    ))
 
     db.commit()
     db.refresh(tenant)

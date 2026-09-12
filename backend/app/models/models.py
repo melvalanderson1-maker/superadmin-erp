@@ -34,7 +34,6 @@ class Tenant(Base):
     dominio = Column(String(200), nullable=False, unique=True)
     color_primario = Column(String(10), default="#1d4ed8")
     color_secundario = Column(String(10), default="#0f172a")
-    logo_url = Column(String(300))
     id_plan = Column(Integer, ForeignKey("planes.id"))
     estado = Column(SAEnum(EstadoTenantEnum, name="estado_tenant_enum"), nullable=False, default=EstadoTenantEnum.provisionando)
 
@@ -44,6 +43,9 @@ class Tenant(Base):
     dominio_backend = Column(String(200))
     admin_correo_generado = Column(String(200))
     admin_password_generada = Column(String(100))
+    logo_url = Column(String(300))
+    mascota_url = Column(String(300))
+    hero_url = Column(String(300))
 
     db_host = Column(String(200))
     db_nombre = Column(String(100))

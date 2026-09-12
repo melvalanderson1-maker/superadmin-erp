@@ -49,6 +49,7 @@
                   {{ redesplegandoId() === t.id ? 'Redesplegando...' : '↻ Redeploy' }}
                 </button>
                 <button class="btn-secundario" (click)="verCredenciales(t)">🔑 Ver acceso</button>
+                <button class="btn-secundario" (click)="abrirMarca(t)">🎨 Marca</button>
                 <button class="btn-eliminar" (click)="abrirConfirmarEliminar(t)">
                   🗑️ Eliminar
                 </button>
@@ -189,5 +190,53 @@
     </div>
   }
 
+  @if (modalMarcaAbierto()) {
+    <div class="modal-overlay" (click)="cerrarMarca()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Marca — {{ tenantMarca()?.nombre_comercial }}</h2>
+          <button class="btn-cerrar" (click)="cerrarMarca()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="campo">
+            <label>Logo</label>
+            <input type="file" accept="image/*" (change)="onArchivoMarcaSeleccionado('logo', $event)" [disabled]="subiendoMarca() === 'logo'" />
+            @if (subiendoMarca() === 'logo') { <p>Subiendo...</p> }
+            @if (tenantMarca()?.logo_url) { <img [src]="tenantMarca()?.logo_url" style="max-width: 120px; margin-top: 8px;" /> }
+          </div>
+          <div class="campo">
+            <label>Mascota</label>
+            <input type="file" accept="image/*" (change)="onArchivoMarcaSeleccionado('mascota', $event)" [disabled]="subiendoMarca() === 'mascota'" />
+            @if (subiendoMarca() === 'mascota') { <p>Subiendo...</p> }
+            @if (tenantMarca()?.mascota_url) { <img [src]="tenantMarca()?.mascota_url" style="max-width: 120px; margin-top: 8px;" /> }
+          </div>
+          <div class="campo">
+            <label>Imagen de portada (hero)</label>
+            <input type="file" accept="image/*" (change)="onArchivoMarcaSeleccionado('hero', $event)" [disabled]="subiendoMarca() === 'hero'" />
+            @if (subiendoMarca() === 'hero') { <p>Subiendo...</p> }
+            @if (tenantMarca()?.hero_url) { <img [src]="tenantMarca()?.hero_url" style="max-width: 200px; margin-top: 8px;" /> }
+          </div>
 
+          <div class="campo-doble">
+            <div class="campo">
+              <label>Color primario</label>
+              <input type="color" [(ngModel)]="coloresForm.color_primario" />
+            </div>
+            <div class="campo">
+              <label>Color secundario</label>
+              <input type="color" [(ngModel)]="coloresForm.color_secundario" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secundario" (click)="cerrarMarca()">Cerrar</button>
+          <button class="btn-primary" (click)="guardarColores()" [disabled]="guardandoColores()">
+            {{ guardandoColores() ? 'Guardando...' : 'Guardar colores' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  
 </div>
