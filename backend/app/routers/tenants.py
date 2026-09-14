@@ -232,9 +232,10 @@ async def subir_imagen_marca(
         "logo": "EMPRESA_LOGO_URL",
         "mascota": "EMPRESA_MASCOTA_URL",
         "hero": "EMPRESA_HERO_URL",
+        "mapa": "EMPRESA_MAPA_URL",
     }
     if tipo not in mapa_env:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="tipo debe ser logo, mascota o hero")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="tipo debe ser logo, mascota, hero o mapa")
 
     if not tenant.dominio_backend or not tenant.admin_correo_generado or not tenant.admin_password_generada:
         raise HTTPException(
@@ -302,6 +303,8 @@ async def subir_imagen_marca(
         tenant.mascota_url = url_relativa
     elif tipo == "hero":
         tenant.hero_url = url_relativa
+    elif tipo == "mapa":
+        tenant.mapa_url = url_relativa
 
     db.add(m.HistorialProvisionamiento(
         id_tenant=tenant.id, accion=f"actualizar_{tipo}", resultado="exito",

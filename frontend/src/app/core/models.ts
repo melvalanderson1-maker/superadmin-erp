@@ -15,6 +15,7 @@ export interface Tenant {
   logo_url?: string;
   mascota_url?: string;
   hero_url?: string;
+  mapa_url?: string;
   whatsapp?: string;
   correo_contacto?: string;
   id_plan?: number;

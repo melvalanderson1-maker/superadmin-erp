@@ -199,7 +199,7 @@ export class TenantsListComponent implements OnInit {
     this.modalMarcaAbierto.set(false);
   }
 
-  onArchivoMarcaSeleccionado(tipo: 'logo' | 'mascota' | 'hero', event: Event): void {
+  onArchivoMarcaSeleccionado(tipo: 'logo' | 'mascota' | 'hero' | 'mapa', event: Event): void {
     const input = event.target as HTMLInputElement;
     const archivo = input.files?.[0];
     const tenant = this.tenantMarca();

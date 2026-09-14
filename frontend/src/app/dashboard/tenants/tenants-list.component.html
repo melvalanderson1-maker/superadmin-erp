@@ -211,6 +211,12 @@
             @if (tenantMarca()?.mascota_url) { <img [src]="tenantMarca()?.mascota_url" style="max-width: 120px; margin-top: 8px;" /> }
           </div>
           <div class="campo">
+            <label>Imagen de la maqueta (mapa interactivo)</label>
+            <input type="file" accept="image/*" (change)="onArchivoMarcaSeleccionado('mapa', $event)" [disabled]="subiendoMarca() === 'mapa'" />
+            @if (subiendoMarca() === 'mapa') { <p>Subiendo...</p> }
+            @if (tenantMarca()?.mapa_url) { <img [src]="tenantMarca()?.mapa_url" style="max-width: 200px; margin-top: 8px;" /> }
+          </div>
+          <div class="campo">
             <label>Imagen de portada (hero)</label>
             <input type="file" accept="image/*" (change)="onArchivoMarcaSeleccionado('hero', $event)" [disabled]="subiendoMarca() === 'hero'" />
             @if (subiendoMarca() === 'hero') { <p>Subiendo...</p> }
