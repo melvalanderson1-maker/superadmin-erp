@@ -103,6 +103,18 @@
             </div>
           </div>
 
+          <div class="preview-marca">
+            <span class="preview-titulo">Vista previa</span>
+            <div class="preview-swatches">
+              <span class="preview-swatch" [style.background]="form.color_primario" [style.color]="previsualizar(form.color_primario, form.color_secundario)['--texto-sobre-primario']">Botón</span>
+              <span class="preview-swatch" [style.background]="form.color_secundario" [style.color]="previsualizar(form.color_primario, form.color_secundario)['--texto-sobre-secundario']">Header</span>
+              <span class="preview-swatch claro" [style.background]="previsualizar(form.color_primario, form.color_secundario)['--color-primario-suave']">Fondo</span>
+            </div>
+            @if (contrasteBajo(form.color_primario, form.color_secundario)) {
+              <p class="preview-aviso">⚠️ Estos colores son muy parecidos entre sí. Prueba con más contraste para un sitio más legible.</p>
+            }
+          </div>
+
           @if (guardando()) {
             <div class="campo" style="margin-top: 14px;">
               <p style="font-size: 13px; color: #465264; margin: 0;">
@@ -232,6 +244,18 @@
               <label>Color secundario</label>
               <input type="color" [(ngModel)]="coloresForm.color_secundario" />
             </div>
+          </div>
+
+          <div class="preview-marca">
+            <span class="preview-titulo">Vista previa</span>
+            <div class="preview-swatches">
+              <span class="preview-swatch" [style.background]="coloresForm.color_primario" [style.color]="previsualizar(coloresForm.color_primario, coloresForm.color_secundario)['--texto-sobre-primario']">Botón</span>
+              <span class="preview-swatch" [style.background]="coloresForm.color_secundario" [style.color]="previsualizar(coloresForm.color_primario, coloresForm.color_secundario)['--texto-sobre-secundario']">Header</span>
+              <span class="preview-swatch claro" [style.background]="previsualizar(coloresForm.color_primario, coloresForm.color_secundario)['--color-primario-suave']">Fondo</span>
+            </div>
+            @if (contrasteBajo(coloresForm.color_primario, coloresForm.color_secundario)) {
+              <p class="preview-aviso">⚠️ Estos colores son muy parecidos entre sí. Prueba con más contraste para un sitio más legible.</p>
+            }
           </div>
 
           <div class="campo">

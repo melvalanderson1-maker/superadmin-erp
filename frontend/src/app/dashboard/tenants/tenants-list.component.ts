@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 
 import { TenantAdminService } from '../../core/services/tenant-admin.service';
 import { Tenant, TenantCreate } from '../../core/models';
+import { construirPaleta, luminancia, PaletaTenant } from '../../core/utils/color-utils';
 
 @Component({
   selector: 'app-tenants-list',
@@ -32,6 +33,14 @@ export class TenantsListComponent implements OnInit {
   slugTocadoManualmente = false;
 
   constructor(private tenantService: TenantAdminService) {}
+
+  previsualizar(primario: string, secundario: string): PaletaTenant {
+    return construirPaleta(primario, secundario);
+  }
+
+  contrasteBajo(primario: string, secundario: string): boolean {
+    return Math.abs(luminancia(primario) - luminancia(secundario)) < 0.12;
+  }
 
   ngOnInit(): void {
     this.cargarTenants();

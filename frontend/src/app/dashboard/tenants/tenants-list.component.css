@@ -210,3 +210,47 @@ td {
 
 .btn-peligro:hover { background: #b91c1c; }
 .btn-peligro:disabled { opacity: 0.6; cursor: not-allowed; }
+
+
+.preview-marca {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.preview-titulo {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.preview-swatches {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.preview-swatch {
+  flex: 1;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.preview-swatch.claro {
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.preview-aviso {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #b45309;
+}
