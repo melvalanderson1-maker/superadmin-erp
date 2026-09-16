@@ -211,10 +211,16 @@
         </div>
         <div class="modal-body">
           <div class="campo">
-            <label>Logo</label>
+            <label>Logo (footer)</label>
             <input type="file" accept="image/*" (change)="onArchivoMarcaSeleccionado('logo', $event)" [disabled]="subiendoMarca() === 'logo'" />
             @if (subiendoMarca() === 'logo') { <p>Subiendo...</p> }
             @if (tenantMarca()?.logo_url) { <img [src]="tenantMarca()?.logo_url" style="max-width: 120px; margin-top: 8px;" /> }
+          </div>
+          <div class="campo">
+            <label>Logo (header)</label>
+            <input type="file" accept="image/*" (change)="onArchivoMarcaSeleccionado('logo_header', $event)" [disabled]="subiendoMarca() === 'logo_header'" />
+            @if (subiendoMarca() === 'logo_header') { <p>Subiendo...</p> }
+            @if (tenantMarca()?.logo_header_url) { <img [src]="tenantMarca()?.logo_header_url" style="max-width: 120px; margin-top: 8px;" /> }
           </div>
           <div class="campo">
             <label>Mascota</label>

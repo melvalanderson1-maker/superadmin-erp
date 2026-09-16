@@ -45,6 +45,7 @@ class TenantOut(ORMBase):
     admin_correo_generado: Optional[str] = None
     admin_password_generada: Optional[str] = None
     logo_url: Optional[str] = None
+    logo_header_url: Optional[str] = None
     mascota_url: Optional[str] = None
     hero_url: Optional[str] = None
     whatsapp: Optional[str] = None

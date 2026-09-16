@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     COOLIFY_SERVER_UUID: str
     COOLIFY_PROJECT_ERP_UUID: str
     DOMINIO_BASE: str
+    BOOTSTRAP_SECRET: str = "CAMBIAR_ESTO_EN_PRODUCCION"
 
     class Config:
         env_file = ".env"

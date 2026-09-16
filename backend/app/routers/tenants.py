@@ -220,7 +220,7 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
 @router.post("/{id_tenant}/marca", response_model=s.TenantOut)
 async def subir_imagen_marca(
     id_tenant: int,
-    tipo: str = Form(...),  # "logo" | "mascota" | "hero"
+    tipo: str = Form(...),  # "logo" | "logo_header" | "mascota" | "hero" | "mapa"
     archivo: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
@@ -230,12 +230,13 @@ async def subir_imagen_marca(
 
     mapa_env = {
         "logo": "EMPRESA_LOGO_URL",
+        "logo_header": "EMPRESA_LOGO_HEADER_URL",
         "mascota": "EMPRESA_MASCOTA_URL",
         "hero": "EMPRESA_HERO_URL",
         "mapa": "EMPRESA_MAPA_URL",
     }
     if tipo not in mapa_env:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="tipo debe ser logo, mascota, hero o mapa")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="tipo debe ser logo, logo_header, mascota, hero o mapa")
 
     if not tenant.dominio_backend or not tenant.admin_correo_generado or not tenant.admin_password_generada:
         raise HTTPException(
@@ -299,13 +300,15 @@ async def subir_imagen_marca(
     # 4. Guardamos también localmente, para mostrarla en el panel sin preguntarle al tenant cada vez
     if tipo == "logo":
         tenant.logo_url = url_relativa
+    elif tipo == "logo_header":
+        tenant.logo_header_url = url_relativa
     elif tipo == "mascota":
         tenant.mascota_url = url_relativa
     elif tipo == "hero":
         tenant.hero_url = url_relativa
     elif tipo == "mapa":
         tenant.mapa_url = url_relativa
-
+        
     db.add(m.HistorialProvisionamiento(
         id_tenant=tenant.id, accion=f"actualizar_{tipo}", resultado="exito",
         detalle=f"url={url_relativa}",

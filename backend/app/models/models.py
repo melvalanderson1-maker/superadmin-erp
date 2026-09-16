@@ -44,6 +44,7 @@ class Tenant(Base):
     admin_correo_generado = Column(String(200))
     admin_password_generada = Column(String(100))
     logo_url = Column(String(300))
+    logo_header_url = Column(String(300))
     mascota_url = Column(String(300))
     hero_url = Column(String(300))
     whatsapp = Column(String(30))

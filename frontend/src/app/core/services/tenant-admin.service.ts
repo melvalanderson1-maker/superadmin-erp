@@ -26,7 +26,7 @@ export class TenantAdminService {
     return this.api.delete<void>(`/tenants/${id}`);
   }
 
-  subirMarca(id: number, tipo: 'logo' | 'mascota' | 'hero'| 'mapa', archivo: File) {
+  subirMarca(id: number, tipo: 'logo' | 'logo_header' | 'mascota' | 'hero' | 'mapa', archivo: File) {
     const formData = new FormData();
     formData.append('archivo', archivo);
     formData.append('tipo', tipo);
