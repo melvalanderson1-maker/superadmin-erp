@@ -4,8 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.routers import auth, tenants
 
+DOCS_HABILITADOS = settings.ENV != "production"
 
-app = FastAPI(title=settings.APP_NAME)
+app = FastAPI(
+    title=settings.APP_NAME,
+    docs_url="/docs" if DOCS_HABILITADOS else None,
+    redoc_url="/redoc" if DOCS_HABILITADOS else None,
+    openapi_url="/openapi.json" if DOCS_HABILITADOS else None,
+)
 
 app.add_middleware(
     CORSMiddleware,

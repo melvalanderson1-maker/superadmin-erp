@@ -4,6 +4,7 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     APP_NAME: str = "Superadmin API"
+    ENV: str = "development"
     DATABASE_URL: str
     SECRET_KEY: str
     ALGORITHM: str = "HS256"

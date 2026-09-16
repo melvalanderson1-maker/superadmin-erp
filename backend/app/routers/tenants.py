@@ -89,6 +89,7 @@ async def crear_tenant(payload: s.TenantCreate, db: Session = Depends(get_db)):
 
         await coolify.set_env_var(backend_uuid, "DATABASE_URL", database_url)
         await coolify.set_env_var(backend_uuid, "SECRET_KEY", secret_key)
+        await coolify.set_env_var(backend_uuid, "ENV", "production")
         await coolify.set_env_var(backend_uuid, "BOOTSTRAP_SECRET", bootstrap_secret)
         await coolify.set_env_var(backend_uuid, "EMPRESA_NOMBRE", tenant.nombre_comercial)
         await coolify.set_env_var(backend_uuid, "EMPRESA_SLUG", tenant.slug)
@@ -308,7 +309,7 @@ async def subir_imagen_marca(
         tenant.hero_url = url_relativa
     elif tipo == "mapa":
         tenant.mapa_url = url_relativa
-        
+
     db.add(m.HistorialProvisionamiento(
         id_tenant=tenant.id, accion=f"actualizar_{tipo}", resultado="exito",
         detalle=f"url={url_relativa}",
